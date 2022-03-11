@@ -76,6 +76,9 @@ class M3U:
         if idx >= len(line):
             return None
 
-        end_idx = line.index(end, idx)
+        try:
+            end_idx = line.index(end, idx)
+        except ValueError:
+            end_idx = len(line)
 
         return line[idx:end_idx]
