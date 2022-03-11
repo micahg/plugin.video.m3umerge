@@ -3,7 +3,7 @@
 import sys
 from argparse import ArgumentParser
 
-from resources.lib.m3u import M3U
+from resources.lib.m3u import M3U, M3UError
 
 
 def parse_arguments():
@@ -16,8 +16,6 @@ def parse_arguments():
 
 def main():
     args, parser = parse_arguments()
-    print('this is the main')
-    print(f'args are {args}')
 
     if args.playlist is None:
         print('Playlist is required for now\n\n')
@@ -25,7 +23,11 @@ def main():
         sys.exit(1)
 
     m3u = M3U(args.playlist)
-    m3u.parse()
+    try:
+        m3u.parse()
+    except M3UError as err:
+        print(f'Failed to parse {args.playlist}: "{err.get_message()}')
+
 
 if __name__ == '__main__':
     main()
