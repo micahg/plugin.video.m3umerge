@@ -4,10 +4,12 @@
 DIRECTIVE_PREFIX = '#'
 DIRECTIVE_HEADER = '#EXTM3U'
 DIRECTIVE_INFO = '#EXTINF:'
+DIRECTIVE_GROUP = '#EXTGRP'
 
-INFO_GUIDE_ID = 'tvg-id='
-
-
+INFO_GUIDE_ID = 'tvg-id'
+INFO_GROUP_TITLE = 'group-title'
+INFO_NAME = 'tvg-name'
+INFO_LOGO = 'tvg-logo'
 
 
 class M3UError(Exception):
@@ -30,8 +32,27 @@ class M3U:
         self.filename = filename
 
     def parse(self):
+        all_channels = []
+        channels_by_id = {}
+        total_raw_channels = 0
         for channel in M3U.generate_channels(self.filename):
-            print(f'Micah channel is "{channel}"')
+            total_raw_channels += 1
+            if INFO_GUIDE_ID in channel:
+                guide_id = channel[INFO_GUIDE_ID]
+                if guide_id in channels_by_id:
+                    existing_channel = channels_by_id[guide_id]
+                    existing_channel['url'].extend(channel['url'])
+                else:
+                    channels_by_id[guide_id] = channel
+            else:
+                all_channels.append(channel)
+
+        for channel in all_channels:
+            print(f'MICAH channel is {channel}')
+
+        print(f'MICAH total raw channels: {total_raw_channels}')
+        print(f'MICAH total channels: {len(all_channels)}')
+        print(f'MICAH channels with Guide ID {len(channels_by_id.items())}')
 
     @staticmethod
     def generate_channels(filename):
@@ -45,40 +66,75 @@ class M3U:
 
             # loop over ever line, once we hit one that does not start with '#'
             # assume that is the actual stream URL
+            channel = {}
             for line in file:
                 if line[0] == DIRECTIVE_PREFIX:
-                    if not line.startswith(DIRECTIVE_INFO):
+                    if line.startswith(DIRECTIVE_GROUP):
+                        # TODO handle group
                         continue
-                    print(f'info is {line.strip()}')
+                    elif not line.startswith(DIRECTIVE_INFO):
+                        continue
 
-                    # how we going to do this? ok, format is either x="y" or x=y\
-                    # so, find the value that comes after =, and if its not " then
-                    # search for space
-                    guide_id = M3U.read_marker_value(line, INFO_GUIDE_ID)
-                    if not guide_id:
-                        raise M3UError('Invalid guide ID')
-                    print(f'Micah got "{guide_id}"')
+                    info, name = M3U.split_info_line(line)
+                    for tag in INFO_GROUP_TITLE, INFO_GUIDE_ID, INFO_NAME, INFO_LOGO:
+                        value = M3U.read_marker_value(info, tag)
+                        if value and not value.isspace():
+                            channel[tag] = value
+                    channel['name'] = name
+
                 else:
-                    yield {'url': line.strip()}
+                    channel['url'] = [(channel['name'], line.strip())]
+                    yield channel
+                    channel = {}
 
     @staticmethod
-    def read_marker_value(line, marker):
+    def split_info_line(line):
+        # first shorten by any commas
+        last_comma_idx = 0
         try:
-            idx = line.index(marker) + len(marker)
+            last_comma_idx = line.rindex(',')
+        except ValueError:
+            pass
+
+        last_quote_idx = 0
+        try:
+            last_quote_idx = line.rindex('"')
+        except ValueError:
+            pass
+
+        # find the first comma after the last quote
+        if last_quote_idx:
+            try:
+                last_comma_idx = line.index(',', last_quote_idx)
+            except ValueError:
+                last_comma_idx = last_quote_idx
+
+        return (line[0:last_comma_idx].strip(), line[last_comma_idx+1:].strip())
+
+    @staticmethod
+    def read_marker_value(info, marker):
+        """
+        Read EXTINF marker values
+        :param info: the info portion of the line to parse
+        :param marker: the marker to search for
+        :return: None if the marker is not found, otherwise, the value
+        """
+        try:
+            idx = info.index(f'{marker}=') + len(marker) + 1
         except ValueError:
             return None
 
         # deal with quotes
-        end = '"' if line[idx] == '"' else ' '
+        end = '"' if info[idx] == '"' else ' '
         if end == '"':
             idx += 1
 
-        if idx >= len(line):
+        if idx >= len(info):
             return None
 
         try:
-            end_idx = line.index(end, idx)
+            end_idx = info.index(end, idx)
         except ValueError:
-            end_idx = len(line)
+            end_idx = len(info)
 
-        return line[idx:end_idx]
+        return info[idx:end_idx]
