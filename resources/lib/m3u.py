@@ -44,6 +44,7 @@ class M3U:
                     existing_channel['url'].extend(channel['url'])
                 else:
                     channels_by_id[guide_id] = channel
+                    all_channels.append(channel)
             else:
                 all_channels.append(channel)
 
