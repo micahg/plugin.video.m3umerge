@@ -1,5 +1,6 @@
 """M3U Module"""
 
+from resources.lib.utils import log
 
 DIRECTIVE_PREFIX = '#'
 DIRECTIVE_HEADER = '#EXTM3U'
@@ -28,14 +29,16 @@ class M3U:
 
     Parses M3U junk... a lot of this was copied from pvr.iptvsimple
     """
-    def __init__(self, filename):
-        self.filename = filename
+    # def __init__(self, filename):
+    def __init__(self, file):
+        self.file = file
 
     def parse(self):
         all_channels = []
         channels_by_id = {}
         total_raw_channels = 0
-        for channel in M3U.generate_channels(self.filename):
+        # for channel in M3U.generate_channels(self.filename):
+        for channel in M3U.generate_channels(self.file):
             total_raw_channels += 1
             if INFO_GUIDE_ID in channel:
                 guide_id = channel[INFO_GUIDE_ID]
@@ -48,45 +51,46 @@ class M3U:
             else:
                 all_channels.append(channel)
 
-        for channel in all_channels:
-            print(f'MICAH channel is {channel}')
-
-        print(f'MICAH total raw channels: {total_raw_channels}')
-        print(f'MICAH total channels: {len(all_channels)}')
-        print(f'MICAH channels with Guide ID {len(channels_by_id.items())}')
+        # for channel in all_channels:
+        #     log(f'MICAH channel is {channel}')
+        #
+        # log(f'MICAH total raw channels: {total_raw_channels}')
+        # log(f'MICAH total channels: {len(all_channels)}')
+        # log(f'MICAH channels with Guide ID {len(channels_by_id.items())}')
+        return all_channels
 
     @staticmethod
-    def generate_channels(filename):
+    def generate_channels(file):
 
-        with open(file=filename, mode='r', encoding='utf-8') as file:
-            # while line = file.readline() is not None:
+        # with open(file=filename, mode='r', encoding='utf-8') as file:
+        # ensure the header is right
+        first_line = file.readline()
+        log(f'MICAHG first line is {first_line}')
+        if not first_line.startswith(DIRECTIVE_HEADER):
+            raise M3UError('Missing M3U header')
 
-            # ensure the header is right
-            if not file.readline().startswith(DIRECTIVE_HEADER):
-                raise M3UError('Missing M3U header')
+        # loop over ever line, once we hit one that does not start with '#'
+        # assume that is the actual stream URL
+        channel = {}
+        for line in file:
+            if line[0] == DIRECTIVE_PREFIX:
+                if line.startswith(DIRECTIVE_GROUP):
+                    # TODO handle group
+                    continue
+                elif not line.startswith(DIRECTIVE_INFO):
+                    continue
 
-            # loop over ever line, once we hit one that does not start with '#'
-            # assume that is the actual stream URL
-            channel = {}
-            for line in file:
-                if line[0] == DIRECTIVE_PREFIX:
-                    if line.startswith(DIRECTIVE_GROUP):
-                        # TODO handle group
-                        continue
-                    elif not line.startswith(DIRECTIVE_INFO):
-                        continue
+                info, name = M3U.split_info_line(line)
+                for tag in INFO_GROUP_TITLE, INFO_GUIDE_ID, INFO_NAME, INFO_LOGO:
+                    value = M3U.read_marker_value(info, tag)
+                    if value and not value.isspace():
+                        channel[tag] = value
+                channel['name'] = name
 
-                    info, name = M3U.split_info_line(line)
-                    for tag in INFO_GROUP_TITLE, INFO_GUIDE_ID, INFO_NAME, INFO_LOGO:
-                        value = M3U.read_marker_value(info, tag)
-                        if value and not value.isspace():
-                            channel[tag] = value
-                    channel['name'] = name
-
-                else:
-                    channel['url'] = [(channel['name'], line.strip())]
-                    yield channel
-                    channel = {}
+            else:
+                channel['url'] = [(channel['name'], line.strip())]
+                yield channel
+                channel = {}
 
     @staticmethod
     def split_info_line(line):
