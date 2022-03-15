@@ -51,9 +51,6 @@ class M3U:
             else:
                 all_channels.append(channel)
 
-        # for channel in all_channels:
-        #     log(f'MICAH channel is {channel}')
-        #
         # log(f'MICAH total raw channels: {total_raw_channels}')
         # log(f'MICAH total channels: {len(all_channels)}')
         # log(f'MICAH channels with Guide ID {len(channels_by_id.items())}')

@@ -1,9 +1,11 @@
 """Test Module."""
 
 import sys
+import os
 from argparse import ArgumentParser
 
 from resources.lib.m3u import M3U, M3UError
+from resources.lib.utils import log
 
 
 def parse_arguments():
@@ -22,11 +24,20 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    m3u = M3U(args.playlist)
+    if os.path.isfile(args.playlist):
+        file = open(file=args.playlist, mode='r', encoding='utf-8')
+    else:
+        log(f'Cannot handle playlist "{args.playlist}"')
+        sys.exit(1)
+
+    m3u = M3U(file)
     try:
-        m3u.parse()
+        channels = m3u.parse()
+        for channel in channels:
+            log(channel)
     except M3UError as err:
-        print(f'Failed to parse {args.playlist}: "{err.get_message()}')
+        log(f'Failed to parse {args.playlist}: "{err.get_message()}')
+
 
 
 if __name__ == '__main__':
