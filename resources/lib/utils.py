@@ -1,3 +1,4 @@
+import io
 import requests
 
 
@@ -7,7 +8,7 @@ def fetch_playlist(playlist):
         log(f'Unable to fetch playlist. Status {resp.status_code}, {resp.content}', True)
         return None
 
-    return resp.raw
+    return io.TextIOWrapper(io.BytesIO(resp.content), encoding='utf-8')
 
 
 def log(msg, error = False):

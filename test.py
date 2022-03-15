@@ -5,7 +5,7 @@ import os
 from argparse import ArgumentParser
 
 from resources.lib.m3u import M3U, M3UError
-from resources.lib.utils import log
+from resources.lib.utils import log, fetch_playlist
 
 
 def parse_arguments():
@@ -27,8 +27,7 @@ def main():
     if os.path.isfile(args.playlist):
         file = open(file=args.playlist, mode='r', encoding='utf-8')
     else:
-        log(f'Cannot handle playlist "{args.playlist}"')
-        sys.exit(1)
+        file = fetch_playlist(args.playlist)
 
     m3u = M3U(file)
     try:
