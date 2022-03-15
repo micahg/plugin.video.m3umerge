@@ -7,10 +7,10 @@ DIRECTIVE_HEADER = '#EXTM3U'
 DIRECTIVE_INFO = '#EXTINF:'
 DIRECTIVE_GROUP = '#EXTGRP'
 
-INFO_GUIDE_ID = 'tvg-id'
-INFO_GROUP_TITLE = 'group-title'
-INFO_NAME = 'tvg-name'
-INFO_LOGO = 'tvg-logo'
+INFO_GUIDE_ID = ('tvg-id', 'id')
+INFO_GROUP_TITLE = ('group-title', 'group')
+INFO_NAME = ('tvg-name', 'name')
+INFO_LOGO = ('tvg-logo', 'logo')
 
 
 class M3UError(Exception):
@@ -29,7 +29,6 @@ class M3U:
 
     Parses M3U junk... a lot of this was copied from pvr.iptvsimple
     """
-    # def __init__(self, filename):
     def __init__(self, file):
         self.file = file
 
@@ -37,7 +36,6 @@ class M3U:
         all_channels = []
         channels_by_id = {}
         total_raw_channels = 0
-        # for channel in M3U.generate_channels(self.filename):
         for channel in M3U.generate_channels(self.file):
             total_raw_channels += 1
             if INFO_GUIDE_ID in channel:
@@ -79,9 +77,9 @@ class M3U:
 
                 info, name = M3U.split_info_line(line)
                 for tag in INFO_GROUP_TITLE, INFO_GUIDE_ID, INFO_NAME, INFO_LOGO:
-                    value = M3U.read_marker_value(info, tag)
+                    value = M3U.read_marker_value(info, tag[0])
                     if value and not value.isspace():
-                        channel[tag] = value
+                        channel[tag[1]] = value
                 channel['name'] = name
 
             else:
